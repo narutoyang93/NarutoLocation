@@ -14,6 +14,7 @@ import android.os.Build;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.widget.Toast;
 
 import org.json.JSONException;
@@ -38,16 +39,20 @@ public class MyLocationNoBd {
     private boolean isGetLocationSuccessful;
     public static ProgressDialog dialog;
     private final static String LOCATION_URL = "http://api.map.baidu.com/geocoder/v2/?ak=86D6dcKlHzqKpqS03HiGtPhqtql7Nlfj&output=json";
+    private static final String TAG = "MyLocationNoBd";
 
     public MyLocationNoBd(Context context) {
         super();
         this.context = context;
         dialog = new ProgressDialog(context, AlertDialog.THEME_HOLO_LIGHT);
-        dialog.setMessage("Please wait while the permissions are verified by positioning......");
+        dialog.setMessage("正在获取位置信息，请稍候...");
         dialog.setCancelable(true);
         getLocation();
     }
 
+    /**
+     * 初始化
+     */
     private void init() {
         isGetLocationSuccessful = false;
         address = "";
@@ -96,22 +101,19 @@ public class MyLocationNoBd {
         if (location != null) {
             longitude = location.getLongitude();
             latitude = location.getLatitude();
-            System.out.println("--->经度=" + longitude);
-            System.out.println("--->纬度=" + latitude);
-            System.out.println("--->location=" + location);
+            Log.d(TAG, "getLocation: 经度=" + longitude + ";纬度=" + latitude + "location=" + location.toString());
             Map<String, Object> map = new HashMap<String, Object>();
-            map.put("location",
-                    location.getLatitude() + "," + location.getLongitude());
+            map.put("location", location.getLatitude() + "," + location.getLongitude());
             try {
                 String jsonString = new Mytask().execute(map).get();
-                System.out.println("--->json=" + jsonString);
+                Log.d(TAG, "getLocation: json=" + jsonString);
                 if (jsonString != null && !jsonString.equals("")) {
                     JsonParser(jsonString);
                     isGetLocationSuccessful = true;
                     showDialog("定位成功", country + address + sematic_description);
                 } else {
                     isGetLocationSuccessful = false;
-                    System.out.println("--->网络请求失败！");
+                    Log.e(TAG, "getLocation: 网络请求失败！");
                     showDialog("ERROR", "网络请求失败！");
                 }
             } catch (InterruptedException e) {
@@ -128,7 +130,7 @@ public class MyLocationNoBd {
             }
         } else {
             isGetLocationSuccessful = false;
-            System.out.println("--->定位失败！");
+            Log.d(TAG, "getLocation: 定位失败！");
             showDialog("ERROR", "定位失败！");
         }
         dialog.dismiss();

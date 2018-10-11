@@ -6,6 +6,7 @@ import android.content.Context;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
@@ -47,6 +48,8 @@ public class MyLocation {
     private boolean isRunInBackground = true;
     private final static String ak = "TmoNwjftaSokTtTZZ6G9n59lw1mrXkcl";
     private MyHandler handler;
+    private MyTools.OperationInterface locationCallBack;
+    private BDLocation bdLocation;
     private static final String TAG = "MyLocation";
 
     public MyLocation(Context context, Context context2, boolean isRunInBackground) {
@@ -58,14 +61,13 @@ public class MyLocation {
         myListener = new MyLocationListener();
         mLocationClient.registerLocationListener(myListener); // 注册监听函数
         setLocationOption();
-        if (!isRunInBackground) {// 运行与前台才需要dialog
+        if (!isRunInBackground) {// 运行于前台才需要dialog
             dialog = new ProgressDialog(context2, AlertDialog.THEME_HOLO_LIGHT);
-            dialog.setMessage("Please wait while the permissions are verified by positioning......");
+            dialog.setMessage("正在获取位置信息，请稍候...");
             dialog.setCancelable(true);
         }
     }
 
-    // -------------------------------------------------
 
     /**
      * 设置相关参数
@@ -97,7 +99,9 @@ public class MyLocation {
     }
 
 
-    // 外部调用的定位方法
+    /**
+     * 外部调用的定位方法
+     */
     public void locating() {
         //检查并申请权限
         if (!LocationHelper.checkAndRequestPermissions(context)) {
@@ -115,11 +119,14 @@ public class MyLocation {
         doLocating();
     }
 
-    // ------------------------------------------
-    // 执行定位
+
+    /**
+     * 执行定位
+     */
     private void doLocating() {
         count2++;
-        System.out.println("--->count2=" + count2);
+        Log.d(TAG, "doLocating: count2=" + count2);
+        bdLocation = null;
         mLocationClient.start();// 开始定位
         if (isOffline) {
             mLocationClient.requestOfflineLocation();
@@ -127,16 +134,18 @@ public class MyLocation {
             mLocationClient.requestLocation();
         }
 
-        System.out.println("--->开始定位");
+        Log.d(TAG, "doLocating: 开始定位");
         count = 0;
         locatingAgain();
     }
 
-    // ----------------------------------------------
-    // 再次定位
+
+    /**
+     * 再次定位
+     */
     private void locatingAgain() {
         count++;
-        System.out.println("--->count=" + count);
+        Log.d(TAG, "locatingAgain: count=" + count);
         if (isRunInBackground) {
             // Looper.prepare();
             new Handler(context.getMainLooper()).postDelayed(new Runnable() {
@@ -155,9 +164,10 @@ public class MyLocation {
 
     }
 
-    // -------------------------------------------------------
 
-    // 是否继续定位
+    /**
+     * 是否继续定位
+     */
     private void finishOrContinueLocating() {
         if (latitude.equals("") || longitude.equals("")) {
             if (count < 4) {
@@ -168,19 +178,18 @@ public class MyLocation {
                 } else {
                     countryName = "";
                     mLocationClient.stop();// 停止定位
-                    System.out.println("--->停止定位");
+                    Log.d(TAG, "finishOrContinueLocating: 停止定位");
                     showOrHideProgressDialog(false);
                     showDialog("定位失败",
                             "Positioning failure!Please check whether the GPS is open and network is connect,then try again.");
                     locatingState = "located";
-                    System.out.println("--->经纬度为空，定位失败");
+                    Log.d(TAG, "finishOrContinueLocating: 经纬度为空，定位失败");
                 }
             }
         } else {
-            System.out.println("--->latitude=" + latitude);
-            System.out.println("--->longitude=" + longitude);
+            Log.d(TAG, "finishOrContinueLocating: latitude=" + latitude + ";longitude=" + longitude);
             mLocationClient.stop();// 停止定位
-            System.out.println("--->停止定位");
+            Log.d(TAG, "finishOrContinueLocating: 停止定位");
 
             // 获取当前时间
             Calendar calendar = Calendar.getInstance();
@@ -207,12 +216,19 @@ public class MyLocation {
         }
     }
 
-    // 执行网络请求后
+
+    /**
+     * 执行网络请求后
+     *
+     * @param result
+     * @param time
+     * @param date
+     */
     private void afterNetWork(String result, String time, String date) {
         if (result != null && !result.equals("")) {
             countryName = JsonParser(result);
             if (countryName.equals("")) {
-                System.out.println("--->国家信息获取失败，定位失败");
+                Log.d(TAG, "afterNetWork: 国家信息获取失败，定位失败");
                 showDialog("定位失败", "Failed to get the Country, please try again.");
             } else {
                 showDialog("定位成功", "经度：" + longitude + "\n纬度：" + longitude + "\n当前地区：" + countryName);
@@ -221,7 +237,7 @@ public class MyLocation {
         } else {
             showOrHideProgressDialog(false);
             countryName = "";
-            System.out.println("--->网络请求失败！");
+            Log.d(TAG, "afterNetWork: 网络请求失败！");
             showDialog("网络请求失败", "Network request failed, please try again.");
         }
         locatingState = "located";
@@ -230,11 +246,14 @@ public class MyLocation {
     }
 
 
-    // ----------------------------------------------------
-
-    // json解析
+    /**
+     * json解析
+     *
+     * @param jsonString
+     * @return
+     */
     private static String JsonParser(String jsonString) {
-        System.out.println("--->jsonString=" + jsonString);
+        Log.d(TAG, "JsonParser: jsonString=" + jsonString);
         String countryName = "";
         int countryCode = -1;
         int cityCode = -1;
@@ -274,6 +293,7 @@ public class MyLocation {
         return countryName;
     }
 
+
     /**
      * @param isShow
      */
@@ -284,13 +304,23 @@ public class MyLocation {
         handler.handleMessage(message);
     }
 
-    // 显示弹窗
+
+    /**
+     * 显示弹窗
+     *
+     * @param title
+     * @param message
+     */
     private void showDialog(String title, String message) {
         if (!isRunInBackground) {
             MyTools.showMyDialog(context, title, message, "OK", null, false, null, null);
         }
     }
 
+
+    /**
+     *
+     */
     private void writeDataToFile() {
         File folderPath = new File(Environment.getExternalStorageDirectory(), "01Text");
         if (!folderPath.exists()) {// 如果目标文件夹不存在，就自动创建
@@ -314,18 +344,33 @@ public class MyLocation {
         }
     }
 
-    // 定位监听
+
+    /**
+     * @param locationCallBack
+     */
+    public void setLocationCallBack(MyTools.OperationInterface locationCallBack) {
+        this.locationCallBack = locationCallBack;
+    }
+
+
+    /**
+     * @Purpose 定位监听
+     * @Author Naruto Yang
+     * @CreateDate 2018/10/11
+     * @Note
+     */
     private class MyLocationListener implements BDLocationListener {
         @Override
         public void onReceiveLocation(BDLocation location) {
+            bdLocation = location;
             if (location == null) {
-                System.out.println("--->location为null");
+                Log.d(TAG, "onReceiveLocation: location为null");
                 latitude = "";
                 longitude = "";
                 return;
             }
             int locType = location.getLocType();
-            System.out.println("--->locType=" + locType);
+            Log.d(TAG, "onReceiveLocation: locType=" + locType);
             if (locType == BDLocation.TypeGpsLocation || locType == BDLocation.TypeNetWorkLocation
                     || locType == BDLocation.TypeOffLineLocation) {
                 latitude = String.valueOf(location.getLatitude());
@@ -359,6 +404,7 @@ public class MyLocation {
 
     }
 
+
     /**
      * @Purpose
      * @Author Naruto Yang
@@ -383,6 +429,10 @@ public class MyLocation {
                                     break;
                                 case DISMISS_DIALOG:
                                     dialog.dismiss();
+                                    if (locationCallBack != null) {
+                                        locationCallBack.done(bdLocation);
+                                        locationCallBack = null;
+                                    }
                                     break;
                             }
                         } catch (Exception e) {
