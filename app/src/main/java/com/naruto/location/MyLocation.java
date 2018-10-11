@@ -8,6 +8,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import com.baidu.location.BDAbstractLocationListener;
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
 import com.baidu.location.LocationClient;
@@ -34,7 +35,7 @@ import java.util.Calendar;
  */
 public class MyLocation {
     private LocationClient mLocationClient = null;
-    private BDLocationListener myListener;
+    private MyLocationListener myListener;
     private String latitude = "";
     private String longitude = "";
     private ProgressDialog dialog;
@@ -359,7 +360,8 @@ public class MyLocation {
      * @CreateDate 2018/10/11
      * @Note
      */
-    private class MyLocationListener implements BDLocationListener {
+    private class MyLocationListener extends BDAbstractLocationListener {
+
         @Override
         public void onReceiveLocation(BDLocation location) {
             bdLocation = location;
