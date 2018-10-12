@@ -9,6 +9,7 @@ import android.os.Build;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +23,7 @@ import java.util.List;
 public class LocationHelper {
     public final static int REQUEST_CODE_PERMISSIONS = 100;
     public final static int REQUEST_CODE_GPS = 200;
+    private static final String TAG = "LocationHelper";
 
 
     /**
@@ -53,20 +55,27 @@ public class LocationHelper {
     //检查GPS开关状态
     public static boolean checkGps(final Context context) {
         if (!MyTools.isGpsOpen(context)) {
-            MyTools.showMyDialog(context, null, "Are you sure refuse to use GPS for Location Log 2.0?", "Setting", "Cancel", false, new MyTools.OperationInterface() {
+            ((Activity) context).runOnUiThread(new Runnable() {
                 @Override
-                public void done(Object o) {
-                    // 跳转GPS设置界面
-                    Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                    try {
-                        ((Activity) context).startActivityForResult(intent, REQUEST_CODE_GPS);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                public void run() {
+                    MyTools.showMyDialog(context, null, "Are you sure refuse to use GPS for Location Log 2.0?", "Setting", "Cancel", false, new MyTools.OperationInterface() {
+                        @Override
+                        public void done(Object o) {
+                            // 跳转GPS设置界面
+                            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                            try {
+                                ((Activity) context).startActivityForResult(intent, REQUEST_CODE_GPS);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }, null);
                 }
-            }, null);
+            });
+            Log.d(TAG, "checkGps: false");
             return false;
         } else {
+            Log.d(TAG, "checkGps: true");
             return true;
         }
     }

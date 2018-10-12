@@ -1,6 +1,8 @@
 package com.naruto.location;
 
+import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.Environment;
@@ -10,9 +12,10 @@ import android.util.Log;
 
 import com.baidu.location.BDAbstractLocationListener;
 import com.baidu.location.BDLocation;
-import com.baidu.location.BDLocationListener;
 import com.baidu.location.LocationClient;
 import com.baidu.location.LocationClientOption;
+import com.naruto.location.LocationHelper;
+import com.naruto.location.MyTools;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -38,7 +41,7 @@ public class MyLocation {
     private MyLocationListener myListener;
     private String latitude = "";
     private String longitude = "";
-    private ProgressDialog dialog;
+    private ProgressDialog progressDialog;
     private int count = 0;
     private int count2 = 0;
     private String countryName = "";
@@ -47,25 +50,27 @@ public class MyLocation {
     private Context context;
     private boolean isOffline = false;
     private boolean isRunInBackground = true;
-    private final static String ak = "TmoNwjftaSokTtTZZ6G9n59lw1mrXkcl";
-    private MyHandler handler;
+    private final static String ak = "qDlPNAIV9GaOeGWLVGROKh8KlDQQMC1A";
     private MyTools.OperationInterface locationCallBack;
     private BDLocation bdLocation;
     private static final String TAG = "MyLocation";
 
-    public MyLocation(Context context, Context context2, boolean isRunInBackground) {
-        super();
-        this.context = context2;
+    public MyLocation(final Context context, boolean isRunInBackground) {
+        this.context = context;
         this.isRunInBackground = isRunInBackground;
-        handler = new MyHandler();
-        mLocationClient = new LocationClient(context);// 声明LocationClient类
+        mLocationClient = new LocationClient(context.getApplicationContext());// 声明LocationClient类
         myListener = new MyLocationListener();
         mLocationClient.registerLocationListener(myListener); // 注册监听函数
         setLocationOption();
         if (!isRunInBackground) {// 运行于前台才需要dialog
-            dialog = new ProgressDialog(context2, AlertDialog.THEME_HOLO_LIGHT);
-            dialog.setMessage("正在获取位置信息，请稍候...");
-            dialog.setCancelable(true);
+            ((Activity)context).runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    progressDialog = new ProgressDialog(context, AlertDialog.THEME_HOLO_LIGHT);
+                    progressDialog.setMessage("正在获取位置信息，请稍候...");
+                    progressDialog.setCancelable(true);
+                }
+            });
         }
     }
 
@@ -113,7 +118,7 @@ public class MyLocation {
             return;
         }
         locatingState = "locating";
-        showOrHideProgressDialog(true);
+        onLocationStartOrFinish(true);
         countryName = "";
         count2 = 0;
         isOffline = (!(MyTools.isNetworkConnected(context) || MyTools.isConnectedWithWifi(context)));
@@ -180,7 +185,7 @@ public class MyLocation {
                     countryName = "";
                     mLocationClient.stop();// 停止定位
                     Log.d(TAG, "finishOrContinueLocating: 停止定位");
-                    showOrHideProgressDialog(false);
+                    onLocationStartOrFinish(false);
                     showDialog("定位失败",
                             "Positioning failure!Please check whether the GPS is open and network is connect,then try again.");
                     locatingState = "located";
@@ -213,7 +218,7 @@ public class MyLocation {
                 final String time0 = calendar.get(Calendar.HOUR_OF_DAY) > 12 ? "PM" : "AM";
                 showDialog("定位成功", message + "\n当前地区：" + countryName + "\n地址：" + address);
             }
-            showOrHideProgressDialog(false);
+            onLocationStartOrFinish(false);
         }
     }
 
@@ -234,9 +239,9 @@ public class MyLocation {
             } else {
                 showDialog("定位成功", "经度：" + longitude + "\n纬度：" + longitude + "\n当前地区：" + countryName);
             }
-            showOrHideProgressDialog(false);
+            onLocationStartOrFinish(false);
         } else {
-            showOrHideProgressDialog(false);
+            onLocationStartOrFinish(false);
             countryName = "";
             Log.d(TAG, "afterNetWork: 网络请求失败！");
             showDialog("网络请求失败", "Network request failed, please try again.");
@@ -296,13 +301,30 @@ public class MyLocation {
 
 
     /**
-     * @param isShow
+     * @param isStart
      */
-    private void showOrHideProgressDialog(boolean isShow) {
-        Message message = new Message();
-        message.what = MyHandler.ACTION_DIALOG;
-        message.arg1 = isShow ? MyHandler.SHOW_DIALOG : MyHandler.DISMISS_DIALOG;
-        handler.handleMessage(message);
+    private void onLocationStartOrFinish(final boolean isStart) {
+        if (!isRunInBackground) {
+            ((Activity) context).runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (progressDialog != null) {
+                        if (isStart) {
+                            Log.d(TAG, "handleMessage: SHOW_DIALOG");
+                            progressDialog.show();
+                        } else {
+                            Log.d(TAG, "handleMessage: DISMISS_DIALOG");
+                            progressDialog.dismiss();
+                        }
+                    }
+                }
+            });
+        }
+
+        if (!isStart && locationCallBack != null) {
+            locationCallBack.done(bdLocation);
+            locationCallBack = null;
+        }
     }
 
 
@@ -404,46 +426,6 @@ public class MyLocation {
             }
         }
 
-    }
-
-
-    /**
-     * @Purpose
-     * @Author Naruto Yang
-     * @CreateDate 2018/10/10
-     * @Note
-     */
-    private class MyHandler extends Handler {
-        public static final int SHOW_DIALOG = 100;
-        public static final int DISMISS_DIALOG = 101;
-        public static final int ACTION_DIALOG = 10;
-
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            switch (msg.what) {
-                case ACTION_DIALOG:
-                    if (!isRunInBackground && dialog != null) {
-                        try {
-                            switch (msg.arg1) {
-                                case SHOW_DIALOG:
-                                    dialog.show();
-                                    break;
-                                case DISMISS_DIALOG:
-                                    dialog.dismiss();
-                                    if (locationCallBack != null) {
-                                        locationCallBack.done(bdLocation);
-                                        locationCallBack = null;
-                                    }
-                                    break;
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    break;
-            }
-        }
     }
 
 }

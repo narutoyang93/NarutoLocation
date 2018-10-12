@@ -2,9 +2,9 @@ package com.naruto.location;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
 
@@ -20,7 +20,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         myLocationNoBd = new MyLocationNoBd(this);
-        myLocation = new MyLocation(getApplicationContext(), this, false);
+        myLocation = new MyLocation(this, false);
     }
 
 
@@ -57,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 获取位置信息
+     *
      * @param type
      */
     public void getLocationInfo(int type) {
