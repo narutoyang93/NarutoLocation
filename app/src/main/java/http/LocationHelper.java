@@ -1,6 +1,5 @@
 package http;
 
-import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -15,6 +14,8 @@ import com.baidu.location.BDLocation;
 import com.baidu.location.LocationClient;
 import com.baidu.location.LocationClientOption;
 import com.naruto.location.MyTools;
+
+import java.util.logging.Handler;
 
 /**
  * @Purpose
@@ -36,6 +37,8 @@ public class LocationHelper {
     private OperationInterface onLocatingErrorCallBack;
     private OperationInterface locationPermissionDeniedCallBack;
     private String errorMessage = "";
+    private long currentLocatingOperationKey;
+    private static final int TIME_OUT = 15000;//定位超时限制，单位：毫秒
 
 
     public LocationHelper(final Context context, boolean isRunInBackground, int permissionsRequestCode_location) {
@@ -94,7 +97,7 @@ public class LocationHelper {
      */
     public void getLocationInfo() {
         //检查并申请权限
-        if (!checkAndRequestPermissions(context)) {
+        if (!com.naruto.location.LocationHelper.checkAndRequestPermissions(context)) {
             return;
         }
 
@@ -137,10 +140,13 @@ public class LocationHelper {
      * 执行定位
      */
     private void doLocating() {
+        if (currentLocatingOperationKey == -1) {
+            Log.d(TAG, "doLocating: 定位超时，已取消本次定位操作");
+            return;
+        }
         locatingCount++;
         errorMessage = "";
-        Log.d(TAG, "doLocating: 开始定位--->locatingCount=" + locatingCount);
-        mLocationClient.start();// 开始定位
+        Log.d(TAG, "doLocating: locatingCount=" + locatingCount);
         isOffline = (!(MyTools.isNetworkConnected(context) || MyTools.isConnectedWithWifi(context)));
         if (isOffline) {
             mLocationClient.requestOfflineLocation();
@@ -150,21 +156,33 @@ public class LocationHelper {
     }
 
 
-    /**
+    /*    *//**
      * 检查并申请权限
-     */
+     *//*
     private boolean checkAndRequestPermissions(Context context) {
         String[] permissions = new String[]{Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION};
         return MyTools.checkPermissions((Activity) context, requestCode_permissions, permissions);
-    }
+    }*/
 
     /**
      * 定位开始
      */
     private void onLocatingStart() {
-        if (progressDialog != null) {
+        Log.d(TAG, "onLocatingStart: 开始定位");
+        if (!isRunInBackground && progressDialog != null) {
             progressDialog.show();
+            final long key = System.currentTimeMillis();
+            currentLocatingOperationKey = key;
+            new android.os.Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (currentLocatingOperationKey == key && progressDialog != null && progressDialog.isShowing()) {
+                        onLocatingFinish(false, null);
+                    }
+                }
+            }, TIME_OUT);
         }
+        mLocationClient.start();// 开始定位
     }
 
     /**
@@ -174,8 +192,9 @@ public class LocationHelper {
      * @param bdLocation
      */
     private void onLocatingFinish(boolean isLocatedSuccess, BDLocation bdLocation) {
-        mLocationClient.stop();// 停止定位
         Log.d(TAG, "finishOrContinueLocating: 停止定位");
+        mLocationClient.stop();// 停止定位
+        currentLocatingOperationKey = -1;
 
         if (!isRunInBackground) {
             ((Activity) context).runOnUiThread(new Runnable() {
@@ -224,7 +243,8 @@ public class LocationHelper {
      */
     private void showDialog(String title, String message) {
         if (!isRunInBackground) {
-            MyTools.showDialog(context, title, message, true, "确定", null, null, null);
+//            MyTools.showDialog(context, title, message, true, "确定", null, null, null);
+            MyTools.showMyDialog(context, title, message, "OK", null, false, null, null);
         }
     }
 
@@ -264,6 +284,7 @@ public class LocationHelper {
     private class MyLocationListener extends BDAbstractLocationListener {
         @Override
         public void onReceiveLocation(BDLocation location) {
+            Log.d(TAG, "onReceiveLocation: ");
             boolean isLocatedSuccess = false;
             if (location == null) {
                 Log.d(TAG, "onReceiveLocation: location为null");
@@ -274,8 +295,14 @@ public class LocationHelper {
                         || locType == BDLocation.TypeOffLineLocation);
             }
 
-            if (!isLocatedSuccess && locatingCount < 15) {
-                doLocating();//再次定位
+            if (!isLocatedSuccess && locatingCount < 10) {
+                //0.5秒后再次定位
+                new android.os.Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        doLocating();
+                    }
+                }, 500);
             } else {
                 onLocatingFinish(isLocatedSuccess, location);
             }
