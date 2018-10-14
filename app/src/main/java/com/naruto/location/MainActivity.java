@@ -12,6 +12,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private MyLocationNoBd myLocationNoBd;
     private MyLocation myLocation;
+    private http.LocationHelper locationHelper;
     private static final int PERMISSIONS_REQUEST_CODE_LOCATION = 100;
     private int locationType = -1;
 
@@ -19,8 +20,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        myLocationNoBd = new MyLocationNoBd(this);
-        myLocation = new MyLocation(this, false);
     }
 
 
@@ -64,14 +63,20 @@ public class MainActivity extends AppCompatActivity {
         locationType = type;
         switch (type) {
             case 1:
-                if (myLocationNoBd != null) {
-                    myLocationNoBd.getLocation();
+                if (myLocationNoBd == null) {
+                    myLocationNoBd = new MyLocationNoBd(this);
                 }
+                myLocationNoBd.getLocation();
                 break;
             case 2:
-                if (myLocation != null) {
-                    myLocation.getLocationInfo();
+/*                if (myLocation == null) {
+                    myLocation = new MyLocation(this, false);
                 }
+                myLocation.getLocationInfo();*/
+                if (locationHelper == null) {
+                    locationHelper = new http.LocationHelper(this, false, PERMISSIONS_REQUEST_CODE_LOCATION);
+                }
+                locationHelper.getLocationInfo();
                 break;
         }
     }

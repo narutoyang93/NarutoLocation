@@ -47,7 +47,6 @@ public class MyLocationNoBd {
         dialog = new ProgressDialog(context, AlertDialog.THEME_HOLO_LIGHT);
         dialog.setMessage("正在获取位置信息，请稍候...");
         dialog.setCancelable(true);
-        getLocation();
     }
 
     /**
