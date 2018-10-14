@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
                 break;
             case 2:
                 if (myLocation != null) {
-                    myLocation.locating();
+                    myLocation.getLocationInfo();
                 }
                 break;
         }

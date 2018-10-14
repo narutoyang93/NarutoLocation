@@ -2,20 +2,16 @@ package com.naruto.location;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 
 import com.baidu.location.BDAbstractLocationListener;
 import com.baidu.location.BDLocation;
 import com.baidu.location.LocationClient;
 import com.baidu.location.LocationClientOption;
-import com.naruto.location.LocationHelper;
-import com.naruto.location.MyTools;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -42,11 +38,11 @@ public class MyLocation {
     private String latitude = "";
     private String longitude = "";
     private ProgressDialog progressDialog;
-    private int count = 0;
-    private int count2 = 0;
+    private int checkCount = 0;//执行一次定位方法过程中检查定位结果次数
+    private int locatingCount = 0;//执行定位方法次数（执行一次定位方法未必能定位成功，故有时需重复执行定位方法多次）
     private String countryName = "";
     private String address = "";
-    private String locatingState = "locating";
+    private String locatingState = "getLocationInfo";
     private Context context;
     private boolean isOffline = false;
     private boolean isRunInBackground = true;
@@ -108,7 +104,7 @@ public class MyLocation {
     /**
      * 外部调用的定位方法
      */
-    public void locating() {
+    public void getLocationInfo() {
         //检查并申请权限
         if (!LocationHelper.checkAndRequestPermissions(context)) {
             return;
@@ -117,10 +113,10 @@ public class MyLocation {
         if (!LocationHelper.checkGps(context)) {
             return;
         }
-        locatingState = "locating";
+        locatingState = "getLocationInfo";
         onLocationStartOrFinish(true);
         countryName = "";
-        count2 = 0;
+        locatingCount = 0;
         isOffline = (!(MyTools.isNetworkConnected(context) || MyTools.isConnectedWithWifi(context)));
         doLocating();
     }
@@ -130,8 +126,8 @@ public class MyLocation {
      * 执行定位
      */
     private void doLocating() {
-        count2++;
-        Log.d(TAG, "doLocating: count2=" + count2);
+        locatingCount++;
+        Log.d(TAG, "doLocating: locatingCount=" + locatingCount);
         bdLocation = null;
         mLocationClient.start();// 开始定位
         if (isOffline) {
@@ -141,17 +137,17 @@ public class MyLocation {
         }
 
         Log.d(TAG, "doLocating: 开始定位");
-        count = 0;
-        locatingAgain();
+        checkCount = 0;
+        checkResultAfter_A_While();
     }
 
 
     /**
-     * 再次定位
+     * 一段时间后检查定位结果
      */
-    private void locatingAgain() {
-        count++;
-        Log.d(TAG, "locatingAgain: count=" + count);
+    private void checkResultAfter_A_While() {
+        checkCount++;
+        Log.d(TAG, "checkResultAfter_A_While: checkCount=" + checkCount);
         if (isRunInBackground) {
             // Looper.prepare();
             new Handler(context.getMainLooper()).postDelayed(new Runnable() {
@@ -176,10 +172,10 @@ public class MyLocation {
      */
     private void finishOrContinueLocating() {
         if (latitude.equals("") || longitude.equals("")) {
-            if (count < 4) {
-                locatingAgain();
+            if (checkCount < 4) {
+                checkResultAfter_A_While();
             } else {
-                if (count2 < 4) {
+                if (locatingCount < 4) {
                     doLocating();
                 } else {
                     countryName = "";
