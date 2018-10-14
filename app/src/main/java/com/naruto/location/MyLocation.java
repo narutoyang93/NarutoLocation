@@ -59,7 +59,7 @@ public class MyLocation {
         mLocationClient.registerLocationListener(myListener); // 注册监听函数
         setLocationOption();
         if (!isRunInBackground) {// 运行于前台才需要dialog
-            ((Activity)context).runOnUiThread(new Runnable() {
+            ((Activity) context).runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     progressDialog = new ProgressDialog(context, AlertDialog.THEME_HOLO_LIGHT);
