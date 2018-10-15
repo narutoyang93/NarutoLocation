@@ -38,7 +38,8 @@ public class LocationHelper {
     private OperationInterface locationPermissionDeniedCallBack;
     private String errorMessage = "";
     private long currentLocatingOperationKey;
-    private static final int TIME_OUT = 15000;//定位超时限制，单位：毫秒
+    private static final int TIME_OUT = 5000;//定位超时限制，单位：毫秒
+    private BDLocation bdLocation;
 
 
     public LocationHelper(final Context context, boolean isRunInBackground, int permissionsRequestCode_location) {
@@ -145,7 +146,7 @@ public class LocationHelper {
             return;
         }
         locatingCount++;
-        errorMessage = "";
+        bdLocation = null;
         Log.d(TAG, "doLocating: locatingCount=" + locatingCount);
         isOffline = (!(MyTools.isNetworkConnected(context) || MyTools.isConnectedWithWifi(context)));
         if (isOffline) {
@@ -177,11 +178,12 @@ public class LocationHelper {
                 @Override
                 public void run() {
                     if (currentLocatingOperationKey == key && progressDialog != null && progressDialog.isShowing()) {
-                        onLocatingFinish(false, null);
+                        onLocatingFinish(false);
                     }
                 }
             }, TIME_OUT);
         }
+        errorMessage = "";
         mLocationClient.start();// 开始定位
     }
 
@@ -189,9 +191,8 @@ public class LocationHelper {
      * 定位结束
      *
      * @param isLocatedSuccess 定位是否成功
-     * @param bdLocation
      */
-    private void onLocatingFinish(boolean isLocatedSuccess, BDLocation bdLocation) {
+    private void onLocatingFinish(boolean isLocatedSuccess) {
         Log.d(TAG, "finishOrContinueLocating: 停止定位");
         mLocationClient.stop();// 停止定位
         currentLocatingOperationKey = -1;
@@ -286,8 +287,10 @@ public class LocationHelper {
         public void onReceiveLocation(BDLocation location) {
             Log.d(TAG, "onReceiveLocation: ");
             boolean isLocatedSuccess = false;
+            bdLocation = location;
             if (location == null) {
                 Log.d(TAG, "onReceiveLocation: location为null");
+                errorMessage = "";
             } else {
                 int locType = location.getLocType();
                 Log.d(TAG, "onReceiveLocation: locType=" + locType);
@@ -295,16 +298,16 @@ public class LocationHelper {
                         || locType == BDLocation.TypeOffLineLocation);
             }
 
-            if (!isLocatedSuccess && locatingCount < 10) {
-                //0.5秒后再次定位
+            if (!isLocatedSuccess && locatingCount < 3) {
+                //1秒后再次定位
                 new android.os.Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         doLocating();
                     }
-                }, 500);
+                }, 1000);
             } else {
-                onLocatingFinish(isLocatedSuccess, location);
+                onLocatingFinish(isLocatedSuccess);
             }
         }
 
