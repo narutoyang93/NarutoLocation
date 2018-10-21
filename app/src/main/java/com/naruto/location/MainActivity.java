@@ -11,8 +11,7 @@ import android.widget.Toast;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private MyLocationNoBd myLocationNoBd;
-    private MyLocation myLocation;
-    private http.LocationHelper locationHelper;
+    private LocationHelper locationHelper;
     private static final int PERMISSIONS_REQUEST_CODE_LOCATION = 100;
     private int locationType = -1;
 
@@ -48,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
-            case LocationHelper.REQUEST_CODE_GPS:
+            case LocationTool.REQUEST_CODE_GPS:
                 getLocationInfo(locationType);
                 break;
         }
@@ -69,12 +68,8 @@ public class MainActivity extends AppCompatActivity {
                 myLocationNoBd.getLocation();
                 break;
             case 2:
-/*                if (myLocation == null) {
-                    myLocation = new MyLocation(this, false);
-                }
-                myLocation.getLocationInfo();*/
                 if (locationHelper == null) {
-                    locationHelper = new http.LocationHelper(this, false, PERMISSIONS_REQUEST_CODE_LOCATION);
+                    locationHelper = new LocationHelper(this, false, PERMISSIONS_REQUEST_CODE_LOCATION);
                 }
                 locationHelper.getLocationInfo();
                 break;

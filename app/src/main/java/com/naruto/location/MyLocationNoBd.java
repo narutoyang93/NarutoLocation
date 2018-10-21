@@ -66,11 +66,11 @@ public class MyLocationNoBd {
      */
     public void getLocation() {
         //检查并申请权限
-        if (!LocationHelper.checkAndRequestPermissions(context)) {
+        if (!LocationTool.checkAndRequestPermissions(context)) {
             return;
         }
 
-        if (!LocationHelper.checkGps(context)) {
+        if (!LocationTool.checkGps(context)) {
             return;
         }
 
