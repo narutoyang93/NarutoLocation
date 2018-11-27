@@ -33,9 +33,11 @@ public class LocationHelper {
     private boolean isRunInBackground = true;
     private int locatingCount;
     private int requestCode_permissions;
-    private OperationInterface onLocatingSuccessCallBack;
-    private OperationInterface onLocatingErrorCallBack;
-    private OperationInterface locationPermissionDeniedCallBack;
+    private OperationInterface onLocatingSuccessCallBack;//定位成功回调
+    private OperationInterface onLocatingErrorCallBack;//定位失败回调
+    private OperationInterface locationPermissionDeniedCallBack;//权限拒绝时回调
+    private OperationInterface onLocatingStartCallBack;//开始定位时的回调，一般用于显示弹窗
+    private OperationInterface onLocatingFinishCallBack;//结束定位时的回调，一般用于移除弹窗
     private String errorMessage = "";
     private long currentLocatingOperationKey;
     private static final int TIME_OUT = 5000;//定位超时限制，单位：毫秒
@@ -171,18 +173,22 @@ public class LocationHelper {
      */
     private void onLocatingStart() {
         Log.d(TAG, "onLocatingStart: 开始定位");
-        if (!isRunInBackground && progressDialog != null) {
-            progressDialog.show();
-            final long key = System.currentTimeMillis();
-            currentLocatingOperationKey = key;
-            new android.os.Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    if (currentLocatingOperationKey == key && progressDialog != null && progressDialog.isShowing()) {
-                        onLocatingFinish(false);
+        final long key = System.currentTimeMillis();//当前定位操作的标识
+        currentLocatingOperationKey = key;
+        if (onLocatingStartCallBack == null) {
+            if (!isRunInBackground && progressDialog != null) {
+                progressDialog.show();
+                new android.os.Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (currentLocatingOperationKey == key && progressDialog != null && progressDialog.isShowing()) {
+                            onLocatingFinish(false);
+                        }
                     }
-                }
-            }, TIME_OUT);
+                }, TIME_OUT);
+            }
+        } else {
+            onLocatingStartCallBack.done(null);
         }
         errorMessage = "";
         mLocationClient.start();// 开始定位
@@ -198,15 +204,20 @@ public class LocationHelper {
         mLocationClient.stop();// 停止定位
         currentLocatingOperationKey = -1;
 
-        if (!isRunInBackground) {
-            ((Activity) context).runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (progressDialog != null) {
-                        progressDialog.dismiss();
+        if (onLocatingFinishCallBack == null) {
+            if (!isRunInBackground) {
+                //为避免创建和销毁dialog在不同线程中执行而导致异常，故创建和销毁都在UI线程执行
+                ((Activity) context).runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (progressDialog != null) {
+                            progressDialog.dismiss();
+                        }
                     }
-                }
-            });
+                });
+            }
+        } else {
+            onLocatingFinishCallBack.done(null);
         }
 
         if (isLocatedSuccess) {//定位成功
@@ -274,6 +285,24 @@ public class LocationHelper {
      */
     public void setLocationPermissionDeniedCallBack(OperationInterface locationPermissionDeniedCallBack) {
         this.locationPermissionDeniedCallBack = locationPermissionDeniedCallBack;
+    }
+
+    /**
+     * 开始定位回调
+     *
+     * @param onLocatingStartCallBack
+     */
+    public void setOnLocatingStartCallBack(OperationInterface onLocatingStartCallBack) {
+        this.onLocatingStartCallBack = onLocatingStartCallBack;
+    }
+
+    /**
+     * 结束定位回调
+     *
+     * @param onLocatingFinishCallBack
+     */
+    public void setOnLocatingFinishCallBack(OperationInterface onLocatingFinishCallBack) {
+        this.onLocatingFinishCallBack = onLocatingFinishCallBack;
     }
 
     /**
