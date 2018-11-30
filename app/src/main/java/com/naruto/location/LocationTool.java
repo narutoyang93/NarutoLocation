@@ -58,7 +58,7 @@ public class LocationTool {
             ((Activity) context).runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    MyTools.showMyDialog(context, null, "Are you sure refuse to use GPS for Location Log 2.0?", "Setting", "Cancel", false, new MyTools.OperationInterface() {
+                    MyTools.showMyDialog(context, null, "开启位置服务，获取精准定位", "去开启", "取消", false, new MyTools.OperationInterface() {
                         @Override
                         public void done(Object o) {
                             // 跳转GPS设置界面
