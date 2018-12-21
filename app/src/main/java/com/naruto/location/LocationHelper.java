@@ -178,18 +178,21 @@ public class LocationHelper {
         if (onLocatingStartCallBack == null) {
             if (!isRunInBackground && progressDialog != null) {
                 progressDialog.show();
-                new android.os.Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (currentLocatingOperationKey == key && progressDialog != null && progressDialog.isShowing()) {
-                            onLocatingFinish(false);
-                        }
-                    }
-                }, TIME_OUT);
             }
         } else {
             onLocatingStartCallBack.done(null);
         }
+
+        //超时自动结束定位
+        new android.os.Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (currentLocatingOperationKey == key) {
+                    onLocatingFinish(false);
+                }
+            }
+        }, TIME_OUT);
+
         errorMessage = "";
         mLocationClient.start();// 开始定位
     }
